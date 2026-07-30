@@ -28,22 +28,34 @@ df = st.session_state.df
 st.title("📘 Gestão de Treinamentos")
 st.caption("Registre os treinamentos realizados por setor.")
 
-# ---------- Formulário de cadastro ----------
-with st.form("novo_treinamento", clear_on_submit=True):
-    col1, col2, col3, col4 = st.columns([1.3, 1.7, 0.8, 1])
+# ---------- Seleção de setor (fica FORA do form para reagir imediatamente) ----------
+setores_existentes = sorted(df["Setor"].unique().tolist()) if not df.empty else []
 
-    setores_existentes = sorted(df["Setor"].unique().tolist()) if not df.empty else []
-    with col1:
-        setor = st.selectbox(
-            "Setor",
-            options=["+ Novo setor"] + setores_existentes,
-            index=0,
-        )
-        if setor == "+ Novo setor":
-            setor = st.text_input("Nome do novo setor", key="novo_setor")
+col_setor, col_novo = st.columns([1.3, 1.7])
+with col_setor:
+    setor_selecionado = st.selectbox(
+        "Setor",
+        options=["+ Novo setor"] + setores_existentes,
+        index=0,
+        key="setor_selecionado",
+    )
+
+criando_setor = setor_selecionado == "+ Novo setor"
+
+with col_novo:
+    if criando_setor:
+        novo_setor = st.text_input("Nome do novo setor", key="novo_setor", placeholder="Ex: Financeiro")
+        setor_final = novo_setor
+    else:
+        setor_final = setor_selecionado
+        st.text_input("Setor selecionado", value=setor_final, disabled=True)
+
+# ---------- Formulário de cadastro (treinamento, quantidade e data) ----------
+with st.form("novo_treinamento", clear_on_submit=True):
+    col2, col3, col4 = st.columns([1.7, 0.8, 1])
 
     with col2:
-        treinamento = st.text_input("Treinamento", placeholder="Ex: NR-35")
+        treinamento = st.text_input("Qual treinamento foi realizado?", placeholder="Ex: NR-35")
     with col3:
         quantidade = st.number_input("Quantidade", min_value=1, value=1, step=1)
     with col4:
@@ -52,11 +64,11 @@ with st.form("novo_treinamento", clear_on_submit=True):
     enviado = st.form_submit_button("➕ Adicionar", use_container_width=True)
 
     if enviado:
-        if not setor or not treinamento:
+        if not setor_final or not treinamento:
             st.warning("Preencha o setor e o nome do treinamento.")
         else:
             nova_linha = pd.DataFrame(
-                [[setor, treinamento, int(quantidade), pd.to_datetime(data_treinamento)]],
+                [[setor_final, treinamento, int(quantidade), pd.to_datetime(data_treinamento)]],
                 columns=COLUNAS,
             )
             st.session_state.df = pd.concat([df, nova_linha], ignore_index=True)
